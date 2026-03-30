@@ -3,68 +3,113 @@ package main
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 )
 
-func main() {
+const output string = "Введите валюту для конвертации (USD/EUR/RMB/RUB). Для отмены расчета введите \"стоп\""
+const EURinRUB float64 = 93.42
+const USDinRUB float64 = 81.14
+const RMBinRUB float64 = 11.73
 
-	for {
-		fmt.Println("Хотите узнать ИМТ вашего тела? да/нет")
-		input := ""
-		fmt.Scan(&input)
-		if strings.ToLower(input) == "да" {
-			kg, height := getInput()
-			imt, err := calculate(kg, height)
-			if err != nil {
-				fmt.Println("Ошибка ввода, введите число больше 0")
-				continue
+var currency = []string{"USD", "EUR", "RMB", "RUB"}
+
+func errorInputCurrency(s string) error {
+	for _, v := range currency {
+		for range v {
+			if s == v {
+				return nil
 			}
-			result(imt)
-		} else if strings.ToLower(input) == "нет" {
-			fmt.Println("До свидания!")
-			break
-		} else {
-			fmt.Println("Введите да или нет")
-			continue
 		}
 	}
+	return errors.New("Ошибка ввода валюты, пожалуйста введите коректную валюту (USD/EUR/RMB/RUB)\n")
 }
 
-func getInput() (float64, float64) {
-	var weight float64
-	var height float64
+func main() {
 
-	fmt.Println("Расчет индекса массы тела")
-	fmt.Println("Введите ваш вес в кг")
-	fmt.Scan(&weight)
-	fmt.Println("Введите ваш рост в см")
-	fmt.Scan(&height)
-	return weight, height
-}
+	fmt.Println("Онлайн калькулятор валюты")
+	for {
 
-func calculate(kg, height float64) (float64, error) {
-	if kg <= 0 {
-		return 0, errors.New("Errors input")
+		sourceCurrency, err := getSourceCurrency()
+		if err != nil {
+			fmt.Printf("%v", err)
+			continue
+		}
+
+		sum, err := getNumsInput()
+		if err != nil {
+			fmt.Printf("%v", err)
+			continue
+		}
+
+		targetCurrency, err := getSourceCurrency()
+		if err != nil {
+			fmt.Printf("%v", err)
+			continue
+		}
+
+		resultConv := CalculateConv(sourceCurrency, sum, targetCurrency)
+
+		fmt.Printf("Ваша сумма ровна %.2f\n", resultConv)
+
 	}
-	if height <= 0 {
-		return 0, errors.New("Errors input")
-	}
-	height = height / 100
-	imt := kg / (height * height)
-	return imt, nil
 }
 
-func result(imt float64) {
+func getSourceCurrency() (string, error) {
+	var value1 string
+	fmt.Println(output)
+	fmt.Scan(&value1)
+	value1 = strings.ToUpper(value1)
+	if value1 == "СТОП" {
+		os.Exit(1)
+	}
+	err := errorInputCurrency(value1)
+	if err != nil {
+		return "", err
+	}
+	return value1, nil
+}
+
+func getNumsInput() (float64, error) {
+	var num float64
+	fmt.Println("Введите необходимую сумму для конвертации")
+	_, err := fmt.Scan(&num)
+	if err != nil {
+		return 0, errors.New("Invalid input\n")
+	}
+	if num < 0 {
+		return 0, errors.New("Ошибка ввода cуммы, пожалуйста введите коректное число\n")
+	}
+	return num, nil
+}
+
+func CalculateConv(a string, b float64, c string) float64 {
+	var totalSum float64
 	switch {
-	case imt < 16:
-		fmt.Println("У вас сильный дефицит веса")
-	case imt < 18.5:
-		fmt.Println("У вас недостаток веса")
-	case imt < 25:
-		fmt.Println("У вас нормальный вес")
-	case imt < 30:
-		fmt.Println("У вас избыточный вес")
-	default:
-		fmt.Println("У вас степень ожирения")
+	case a == "USD" && c == "RUB":
+		totalSum = b * USDinRUB
+	case a == "USD" && c == "EUR":
+		totalSum = b * (USDinRUB / EURinRUB)
+	case a == "USD" && c == "RMB":
+		totalSum = b * (USDinRUB / RMBinRUB)
+	case a == "EUR" && c == "USD":
+		totalSum = b * (EURinRUB / USDinRUB)
+	case a == "EUR" && c == "RUB":
+		totalSum = b * EURinRUB
+	case a == "EUR" && c == "RMB":
+		totalSum = b * (EURinRUB / RMBinRUB)
+	case a == "RMB" && c == "USD":
+		totalSum = b * (RMBinRUB / USDinRUB)
+	case a == "RMB" && c == "RUB":
+		totalSum = b * RMBinRUB
+	case a == "RMB" && c == "EUR":
+		totalSum = b * (EURinRUB / RMBinRUB)
+	case a == "RUB" && c == "USD":
+		totalSum = b * ((EURinRUB / USDinRUB) / EURinRUB)
+	case a == "RUB" && c == "EUR":
+		totalSum = b * ((USDinRUB / EURinRUB) / USDinRUB)
+	case a == "RUB" && c == "RMB":
+		totalSum = b * (USDinRUB / RMBinRUB) / USDinRUB
 	}
+	return totalSum
 }
