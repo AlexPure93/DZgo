@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -9,7 +10,10 @@ import (
 
 func main() {
 	result := 0.0
-	setNums, operation := getInput()
+	setNums, operation, err := getInput()
+	if err != nil {
+		fmt.Println("Invalid input nums")
+	}
 	parsionNum, err := pars(setNums)
 	if err != nil {
 		fmt.Println(err)
@@ -22,10 +26,10 @@ func main() {
 	default:
 		result = med(parsionNum)
 	}
-	fmt.Println(result)
+	fmt.Printf("%.2f", result)
 }
 
-func getInput() ([]string, string) {
+func getInput() ([]string, string, error) {
 	inputNums := []string{}
 	operations := ""
 	nums := ""
@@ -37,15 +41,12 @@ func getInput() ([]string, string) {
 		}
 	}
 	fmt.Println("Введите числа через запятую (для остановки введи n)")
-	for {
-		fmt.Scan(&nums)
-		if nums == "n" {
-			break
-		}
-		inputNums = append(inputNums, nums)
+	fmt.Scan(&nums)
+	if nums == "" {
+		return nil, "", errors.New("Err")
 	}
-
-	return inputNums, strings.ToUpper(operations)
+	inputNums = append(inputNums, nums)
+	return inputNums, strings.ToUpper(operations), nil
 }
 
 func pars(setNums []string) ([]int, error) {
@@ -68,12 +69,12 @@ func pars(setNums []string) ([]int, error) {
 }
 
 func avg(pars []int) float64 {
-	avg := 0
+	avg := 0.0
 	for _, v := range pars {
-		avg += v
+		avg += float64(v)
 	}
-	avg = avg / len(pars)
-	return float64(avg)
+	avg = avg / float64(len(pars))
+	return (avg)
 }
 
 func sum(pars []int) float64 {
