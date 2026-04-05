@@ -8,108 +8,89 @@ import (
 )
 
 const output string = "Введите валюту для конвертации (USD/EUR/RMB/RUB). Для отмены расчета введите \"стоп\""
-const EURinRUB float64 = 93.42
-const USDinRUB float64 = 81.14
-const RMBinRUB float64 = 11.73
 
-var currency = []string{"USD", "EUR", "RMB", "RUB"}
+// Курсы валют относительно RUB (сколько RUB стоит 1 единица валюты)
+var rates = map[string]float64{
+	"USD": 81.14,
+	"EUR": 93.42,
+	"RMB": 11.73,
+	"RUB": 1.0,
+}
+
+// Список доступных валют для проверки
+var currencies = []string{"USD", "EUR", "RMB", "RUB"}
 
 func errorInputCurrency(s string) error {
-	for _, v := range currency {
-		for range v {
-			if s == v {
-				return nil
-			}
+	for _, v := range currencies {
+		if s == v {
+			return nil
 		}
 	}
-	return errors.New("Ошибка ввода валюты, пожалуйста введите коректную валюту (USD/EUR/RMB/RUB)\n")
+	return errors.New("Ошибка ввода валюты, пожалуйста введите корректную валюту (USD/EUR/RMB/RUB)\n")
 }
 
-func main() {
-
-	fmt.Println("Онлайн калькулятор валюты")
-	for {
-
-		sourceCurrency, err := getSourceCurrency()
-		if err != nil {
-			fmt.Printf("%v", err)
-			continue
-		}
-
-		sum, err := getNumsInput()
-		if err != nil {
-			fmt.Printf("%v", err)
-			continue
-		}
-
-		targetCurrency, err := getSourceCurrency()
-		if err != nil {
-			fmt.Printf("%v", err)
-			continue
-		}
-
-		resultConv := CalculateConv(sourceCurrency, sum, targetCurrency)
-
-		fmt.Printf("Ваша сумма ровна %.2f\n", resultConv)
-
+func getCurrency(prompt string) (string, error) {
+	var value string
+	fmt.Println(prompt)
+	fmt.Scan(&value)
+	value = strings.ToUpper(value)
+	if value == "СТОП" {
+		os.Exit(0)
 	}
-}
-
-func getSourceCurrency() (string, error) {
-	var value1 string
-	fmt.Println(output)
-	fmt.Scan(&value1)
-	value1 = strings.ToUpper(value1)
-	if value1 == "СТОП" {
-		os.Exit(1)
-	}
-	err := errorInputCurrency(value1)
+	err := errorInputCurrency(value)
 	if err != nil {
 		return "", err
 	}
-	return value1, nil
+	return value, nil
 }
 
-func getNumsInput() (float64, error) {
+func getAmount() (float64, error) {
 	var num float64
 	fmt.Println("Введите необходимую сумму для конвертации")
 	_, err := fmt.Scan(&num)
 	if err != nil {
-		return 0, errors.New("Invalid input\n")
+		return 0, errors.New("Ошибка ввода суммы, пожалуйста введите число\n")
 	}
 	if num < 0 {
-		return 0, errors.New("Ошибка ввода cуммы, пожалуйста введите коректное число\n")
+		return 0, errors.New("Ошибка ввода суммы, сумма не может быть отрицательной\n")
 	}
 	return num, nil
 }
 
-func CalculateConv(a string, b float64, c string) float64 {
-	var totalSum float64
-	switch {
-	case a == "USD" && c == "RUB":
-		totalSum = b * USDinRUB
-	case a == "USD" && c == "EUR":
-		totalSum = b * (USDinRUB / EURinRUB)
-	case a == "USD" && c == "RMB":
-		totalSum = b * (USDinRUB / RMBinRUB)
-	case a == "EUR" && c == "USD":
-		totalSum = b * (EURinRUB / USDinRUB)
-	case a == "EUR" && c == "RUB":
-		totalSum = b * EURinRUB
-	case a == "EUR" && c == "RMB":
-		totalSum = b * (EURinRUB / RMBinRUB)
-	case a == "RMB" && c == "USD":
-		totalSum = b * (RMBinRUB / USDinRUB)
-	case a == "RMB" && c == "RUB":
-		totalSum = b * RMBinRUB
-	case a == "RMB" && c == "EUR":
-		totalSum = b * (EURinRUB / RMBinRUB)
-	case a == "RUB" && c == "USD":
-		totalSum = b * ((EURinRUB / USDinRUB) / EURinRUB)
-	case a == "RUB" && c == "EUR":
-		totalSum = b * ((USDinRUB / EURinRUB) / USDinRUB)
-	case a == "RUB" && c == "RMB":
-		totalSum = b * (USDinRUB / RMBinRUB) / USDinRUB
+// Универсальная конвертация через карту курсов относительно RUB
+func convert(amount float64, from, to string) float64 {
+	// Сначала переводим сумму в RUB: amount * rate[from]
+	// Затем из RUB в целевую: result = rubAmount / rate[to]
+	rubAmount := amount * rates[from]
+	return rubAmount / rates[to]
+}
+
+func main() {
+	fmt.Println("Онлайн калькулятор валюты")
+	for {
+		// Запрос исходной валюты
+		from, err := getCurrency(output)
+		if err != nil {
+			fmt.Printf("%v", err)
+			continue
+		}
+
+		// Запрос суммы
+		sum, err := getAmount()
+		if err != nil {
+			fmt.Printf("%v", err)
+			continue
+		}
+
+		// Запрос целевой валюты
+		to, err := getCurrency("Введите целевую валюту (USD/EUR/RMB/RUB). Для отмены введите \"стоп\"")
+		if err != nil {
+			fmt.Printf("%v", err)
+			continue
+		}
+
+		// Конвертация
+		result := convert(sum, from, to)
+		fmt.Printf("%.2f %s = %.2f %s\n", sum, from, result, to)
 	}
-	return totalSum
 }
